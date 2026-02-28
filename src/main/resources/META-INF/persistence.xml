@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence
+             https://jakarta.ee/xml/ns/persistence/persistence_3_1.xsd"
+             version="3.1">
+
+    <persistence-unit name="myPersistenceUnit" transaction-type="RESOURCE_LOCAL">
+
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <!-- Managed Entities -->
+        <class>entity.User</class>
+        <class>entity.Product</class>
+        <class>entity.CartItem</class>
+
+        <properties>
+            <!-- Driver — same for local and FreeSQLDatabase -->
+            <property name="jakarta.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
+
+            <!--
+                Fallback values used only when env vars DB_URL / DB_USERNAME / DB_PASSWORD
+                are NOT set (i.e. local dev without env vars).
+                On Render these are overridden by JPAUtil at runtime.
+            -->
+            <property name="jakarta.persistence.jdbc.url"
+                      value="jdbc:mysql://localhost:3306/ecommerce_db?createDatabaseIfNotExist=true&amp;useSSL=false&amp;serverTimezone=UTC"/>
+            <property name="jakarta.persistence.jdbc.user"     value="root"/>
+            <property name="jakarta.persistence.jdbc.password" value="root"/>
+
+            <property name="hibernate.dialect"      value="org.hibernate.dialect.MySQLDialect"/>
+            <property name="hibernate.show_sql"     value="false"/>
+            <property name="hibernate.hbm2ddl.auto" value="update"/>
+
+            <!-- Connection pool — keep connections low for FreeSQLDatabase free tier -->
+            <property name="hibernate.connection.pool_size"              value="3"/>
+            <property name="hibernate.connection.autocommit"             value="false"/>
+
+            <!-- Keep connections alive across Render's idle timeouts -->
+            <property name="hibernate.connection.provider_disables_autocommit" value="true"/>
+            <property name="hibernate.hikari.connectionTimeout"          value="30000"/>
+            <property name="hibernate.hikari.idleTimeout"                value="600000"/>
+            <property name="hibernate.hikari.maxLifetime"                value="1800000"/>
+            <property name="hibernate.hikari.minimumIdle"                value="1"/>
+            <property name="hibernate.hikari.maximumPoolSize"            value="3"/>
+
+            <!-- Disable second-level cache (avoids ehcache dependency issues on Render) -->
+            <property name="hibernate.cache.use_second_level_cache" value="false"/>
+            <property name="hibernate.cache.use_query_cache"        value="false"/>
+        </properties>
+
+    </persistence-unit>
+</persistence>

@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: ecommerce-app
+    runtime: java
+    buildCommand: ./render-build.sh
+    startCommand: java -Dwebapp.dir=target/webapp -jar target/eCommerce.jar
+    envVars:
+      - key: DB_URL
+        sync: false        # Set manually in Render dashboard — never commit credentials
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: PORT
+        generateValue: false
+    healthCheckPath: /
