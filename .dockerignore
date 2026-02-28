@@ -1,0 +1,6 @@
+target/
+.idea/
+.smarttomcat/
+.git/
+*.md
+render-build.sh
