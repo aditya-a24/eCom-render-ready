@@ -1,45 +1,61 @@
 package util;
 
 import jakarta.persistence.EntityManager;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
 
 /**
- * Eagerly initialises the JPAUtil singleton (and therefore the HikariCP pool)
- * at application startup, and cleanly shuts it down on undeploy.
+ * Manages the HikariCP connection pool lifecycle.
  *
- * Without this, the first HTTP request pays the cost of pool creation and any
- * DB misconfiguration only surfaces at request-time rather than at boot.
+ * contextInitialized  — warms up the pool so the first user request is fast.
+ *                       NEVER throws: if the DB is unreachable at boot time
+ *                       (e.g. FreeSQLDatabase free-tier cold start) the app
+ *                       still deploys and individual requests receive a proper
+ *                       HTTP 500 rather than a silent HTTP 404 caused by
+ *                       Tomcat marking the context as failed.
+ *
+ * contextDestroyed    — drains the pool cleanly to release all connections
+ *                       back to FreeSQLDatabase before the container stops.
  */
 @WebListener
 public class AppLifecycleListener implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
-        // Open and immediately close one EM to force pool initialisation.
-        // The try-finally guarantees the warm-up EM is always released.
+        ServletContext ctx = sce.getServletContext();
         EntityManager em = null;
         try {
             em = JPAUtil.getEntityManager();
-            // Execute a trivial query so Hibernate validates the schema too
+            // Verify DB connectivity with a lightweight native query
             em.createNativeQuery("SELECT 1").getSingleResult();
-            sce.getServletContext().log("[AppLifecycleListener] DB connection pool initialised OK.");
+            ctx.log("[AppLifecycleListener] Database connection pool initialised successfully.");
         } catch (Exception e) {
-            // Throw so Tomcat marks the deployment as failed — misconfiguration
-            // is visible immediately in Render logs instead of on the first request.
-            throw new RuntimeException(
-                "[AppLifecycleListener] Failed to connect to the database: " + e.getMessage(), e);
+            // LOG the error but do NOT re-throw.
+            //
+            // If we threw here, Tomcat would mark the entire webapp as FAILED
+            // and return HTTP 404 for every request — indistinguishable from a
+            // missing resource.  By catching silently, the app starts normally
+            // and the first request that needs the DB will get a descriptive
+            // HTTP 500 with a full stack trace in the Render logs instead.
+            ctx.log("[AppLifecycleListener] WARNING: Could not connect to the database at startup. " +
+                    "The application will retry on the first request. Reason: " + e.getMessage());
         } finally {
+            // Always close the warm-up EntityManager, even if the query failed.
             if (em != null && em.isOpen()) {
-                em.close();   // ← THIS is the fix: the warm-up EM is always closed
+                try { em.close(); } catch (Exception ignored) {}
             }
         }
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-        JPAUtil.shutdown();
-        sce.getServletContext().log("[AppLifecycleListener] DB connection pool shut down.");
+        try {
+            JPAUtil.shutdown();
+            sce.getServletContext().log("[AppLifecycleListener] Database connection pool shut down.");
+        } catch (Exception e) {
+            sce.getServletContext().log("[AppLifecycleListener] Error during pool shutdown: " + e.getMessage());
+        }
     }
 }

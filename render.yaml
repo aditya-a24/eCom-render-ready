@@ -1,15 +1,23 @@
 services:
   - type: web
     name: ecommerce-app
-    runtime: docker           # Render builds and runs the Dockerfile
+    runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    port: 8080                # Must match Tomcat's connector port (EXPOSE 8080)
+    port: 8080
+
+    # Health check — Render polls this path to decide if the service is "up".
+    # "/" is handled by RootServlet which just forwards to index.jsp,
+    # so a 200 back means Tomcat is fully deployed and serving JSPs.
+    healthCheckPath: /
+
     envVars:
+      # ── Database (FreeSQLDatabase) ─────────────────────────────────────────
+      # Set these in the Render dashboard under Environment.
+      # Format: jdbc:mysql://<host>:<port>/<dbname>?useSSL=true&serverTimezone=UTC
       - key: DB_URL
-        sync: false           # Set manually in Render dashboard — never commit credentials
+        sync: false
       - key: DB_USERNAME
         sync: false
       - key: DB_PASSWORD
         sync: false
-    healthCheckPath: /
