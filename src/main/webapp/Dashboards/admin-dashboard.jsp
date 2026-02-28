@@ -5,13 +5,23 @@
     response.sendRedirect("../login.jsp");
     return;
   }
-  EntityManager em = JPAUtil.getEntityManager();
-  UserService    us = new UserService(em);
-  ProductService ps = new ProductService(em);
 
-  List<User>    users    = us.getAllUsers();
-  List<User>    vendors  = us.getAllVendors();
-  List<Product> products = ps.getAllProducts();
+  List<User>    users    = new java.util.ArrayList<>();
+  List<User>    vendors  = new java.util.ArrayList<>();
+  List<Product> products = new java.util.ArrayList<>();
+
+  EntityManager em = null;
+  try {
+      em = JPAUtil.getEntityManager();
+      UserService    us = new UserService(em);
+      ProductService ps = new ProductService(em);
+
+      users    = us.getAllUsers();
+      vendors  = us.getAllVendors();
+      products = ps.getAllProducts();
+  } finally {
+      if (em != null && em.isOpen()) em.close();
+  }
 
   long verifiedVendors = vendors.stream().filter(User::isVerified).count();
   long availableProds  = products.stream().filter(p -> "Available".equals(p.getStatus())).count();
@@ -219,4 +229,3 @@
 </script>
 </body>
 </html>
-<%  em.close(); %>

@@ -8,24 +8,30 @@
 
   User currentUser = (User) session.getAttribute("user");
 
-  EntityManager em = JPAUtil.getEntityManager();
-  ProductService ps = new ProductService(em);
-  CartService    cs = new CartService(em);
-
-  List<Product>  products  = ps.getAllProducts();
-  List<CartItem> cartItems = cs.getCartItems(currentUser.getEmail());
-
-  // Resolve product details for cart items
-  List<Object[]> cartDetails = new ArrayList<>();
+  List<Product>  products    = new java.util.ArrayList<>();
+  List<CartItem> cartItems   = new java.util.ArrayList<>();
+  List<Object[]> cartDetails = new java.util.ArrayList<>();
   double cartTotal = 0.0;
-  for (CartItem ci : cartItems) {
-    Product cp = ps.getProductById(ci.getProductId());
-    if (cp != null) {
-      cartDetails.add(new Object[]{ci, cp});
-      cartTotal += cp.getPrice() * ci.getQuantity();
-    }
+
+  EntityManager em = null;
+  try {
+      em = JPAUtil.getEntityManager();
+      ProductService ps = new ProductService(em);
+      CartService    cs = new CartService(em);
+
+      products  = ps.getAllProducts();
+      cartItems = cs.getCartItems(currentUser.getEmail());
+
+      for (CartItem ci : cartItems) {
+          Product cp = ps.getProductById(ci.getProductId());
+          if (cp != null) {
+              cartDetails.add(new Object[]{ci, cp});
+              cartTotal += cp.getPrice() * ci.getQuantity();
+          }
+      }
+  } finally {
+      if (em != null && em.isOpen()) em.close();
   }
-  em.close();
 
   // Which tab to show
   String activeTab = request.getParameter("tab");

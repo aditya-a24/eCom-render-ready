@@ -54,6 +54,17 @@
       <version>9.4.0</version>
     </dependency>
 
+    <!--
+      HikariCP — production-grade connection pool.
+      Hibernate 6 integrates with it via hibernate.connection.provider_class.
+      Required to actually enforce maximumPoolSize = 3 on FreeSQLDatabase.
+    -->
+    <dependency>
+      <groupId>com.zaxxer</groupId>
+      <artifactId>HikariCP</artifactId>
+      <version>5.1.0</version>
+    </dependency>
+
     <!-- Unit testing -->
     <dependency>
       <groupId>junit</groupId>

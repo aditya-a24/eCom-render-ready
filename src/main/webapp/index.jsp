@@ -1,16 +1,21 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="java.util.List, java.util.ArrayList, entity.Product, jakarta.persistence.EntityManager, util.JPAUtil, service.ProductService" %>
 <%
-    EntityManager em = JPAUtil.getEntityManager();
-    ProductService ps = new ProductService(em);
-    List<Product> allProducts = ps.getAllProducts();
+    List<Product> allProducts       = new ArrayList<>();
     List<Product> availableProducts = new ArrayList<>();
-    for (Product p : allProducts) {
-        if ("Available".equals(p.getStatus()) && p.getStock() > 0) {
-            availableProducts.add(p);
+    EntityManager em = null;
+    try {
+        em = JPAUtil.getEntityManager();
+        ProductService ps = new ProductService(em);
+        allProducts = ps.getAllProducts();
+        for (Product p : allProducts) {
+            if ("Available".equals(p.getStatus()) && p.getStock() > 0) {
+                availableProducts.add(p);
+            }
         }
+    } finally {
+        if (em != null && em.isOpen()) em.close();
     }
-    em.close();
     int total = availableProducts.size();
     List<Product> featured = availableProducts.subList(0, Math.min(8, total));
     List<Product> newArr   = total > 0 ? availableProducts.subList(Math.max(0, total - 8), total) : availableProducts;

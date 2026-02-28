@@ -54,11 +54,17 @@
      else if ("unauthorized".equals(eParam)){ %><div class="alert alert-danger">❌ Unauthorized action.</div><% } %>
 
   <%
-    EntityManager em = JPAUtil.getEntityManager();
-    ProductService ps = new ProductService(em);
-    List<Product> products = ps.getProductsByVendor(vendor.getEmail());
-    em.close();
-    long inStockCount = products.stream().filter(p->"Available".equals(p.getStatus())).count();
+    List<Product> products = new java.util.ArrayList<>();
+    long inStockCount = 0;
+    EntityManager em = null;
+    try {
+        em = JPAUtil.getEntityManager();
+        ProductService ps = new ProductService(em);
+        products = ps.getProductsByVendor(vendor.getEmail());
+        inStockCount = products.stream().filter(p -> "Available".equals(p.getStatus())).count();
+    } finally {
+        if (em != null && em.isOpen()) em.close();
+    }
   %>
 
   <div class="dashboard-container">
